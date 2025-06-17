@@ -8,6 +8,7 @@ export default defineConfig({
   base: '/',
   publicDir: "public", //静态资源目录
   optimizeDeps: {
+    include: ['react','react-dom'],//剥离通用包
     esbuildOptions: {
       loader: {
         '.js': 'jsx',//解决在js中写jsx报错误的问题
@@ -53,11 +54,25 @@ export default defineConfig({
   },
 
   build: {//打包优化
-    chunkSizeWarningLimit: 2000, //设置警告阈值，单位是kB
+    chunkSizeWarningLimit: 500, //设置警告阈值，单位是kB
     outDir: `dist/${PROJECT_NAME}`, //输出目录,如果是子项目，直接输出到子目录
     copyPublicDir: true, //是否复制public目录到输出目录
+    minify:'esbuild',//使用esbuild不用默认的terser
     rollupOptions: {
       output: {
+        manualChunks: (id) => { //手动分包，避免所有包都打在一个里面太大
+          if (id.includes('node_modules')) {
+            // 如果是node_modules中的文件，则按模块名分割
+            // console.log('id',id)
+            // const moduleName = id.toString().split('node_modules/')[1].split('/')[0];
+            if (id.includes('react')) {
+              return 'vendor-react'; // 将react打包到vendor-react目录下
+            }
+            return `vendor`; // 将第三方库打包到vendor目录下
+          } else if (id.includes('src/')) {
+            return 'pages'
+          }
+        },
         entryFileNames: 'static/js/[name]-[hash].js', //入口文件名
         chunkFileNames: 'static/js/chunk/[name]-[hash].js', //分块文件名
         assetFileNames: (assetInfo) => {
